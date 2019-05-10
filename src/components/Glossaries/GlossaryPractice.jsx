@@ -1,10 +1,11 @@
 import firebase from "../../Firebase";
 import React, { Fragment } from "react";
-import { TableHead, TableRow, TableCell, Typography, Table, TableBody, Paper, Grid, TextField, withStyles, Button } from "@material-ui/core";
+import { TableHead, TableRow, TableCell, Typography, Table, TableBody, Paper, Grid, TextField, withStyles, Button, Input } from "@material-ui/core";
 import {
   SubdirectoryArrowRight as SubdirectoryArrowRightIcon,
   ArrowForward as ArrowForwardIcon
 } from "@material-ui/icons";
+import { Transition, TransitionGroup } from "react-transition-group";
 
 const styles = theme => {
   return {
@@ -12,14 +13,18 @@ const styles = theme => {
       position: "fixed",
       top: theme.spacing.unit * 16,
       left: 0,
-      width: "100%"
+      width: "100%",
+      [theme.breakpoints.between("lg", "xl")]: {},
+      [theme.breakpoints.between("md", "lg")]: {},
+      [theme.breakpoints.between("sm", "md")]: { top: "20%" },
+      [theme.breakpoints.between("xs", "sm")]: { top: "20%" },
     },
     questionContainer: {
       [theme.breakpoints.between("lg", "xl")]: {
         width: "auto",
         top: theme.spacing.unit * 32,
-        marginLeft: theme.spacing.unit * 32,
-        marginRight: theme.spacing.unit * 32
+        marginLeft: theme.spacing.unit * 64,
+        marginRight: theme.spacing.unit * 64
       },
       [theme.breakpoints.between("md", "lg")]: {
         width: "auto",
@@ -28,12 +33,12 @@ const styles = theme => {
         marginRight: theme.spacing.unit * 16
       },
       [theme.breakpoints.between("sm", "md")]: {
-        width: "auto",
-        top: theme.spacing.unit * 8,
+        top: "25%",
+        // top: theme.spacing.unit * 8,
         marginLeft: theme.spacing.unit * 8,
         marginRight: theme.spacing.unit * 8
       },
-      [theme.breakpoints.between("xs","sm")]: {
+      [theme.breakpoints.between("xs", "sm")]: {
         top: "25%",
         width: "auto",
         marginLeft: theme.spacing.unit,
@@ -41,7 +46,7 @@ const styles = theme => {
       },
 
     },
-    kanjiContainer: {
+    questionContainer: {
       [theme.breakpoints.between("lg", "xl")]: {
         padding: theme.spacing.unit * 20,
         // backgroundColor: "red"
@@ -54,17 +59,21 @@ const styles = theme => {
         padding: theme.spacing.unit * 5,
         // backgroundColor: "yellow"
       },
-      [theme.breakpoints.between("xs","sm")]: {
+      [theme.breakpoints.between("xs", "sm")]: {
         // padding: theme.spacing.unit * 5,
         paddingLeft: 0,
         paddingRight: 0,
         paddingBottom: theme.spacing.unit * 4,
         paddingTop: theme.spacing.unit * 4,
         // backgroundColor: "blue"
-      }
+      },
+    },
+    kanjiContainer: {
+      textAlign: "center",
     },
     kanji: {
-      textAlign: "center"
+      transition: `transform ${300}ms ease-in-out`,
+      transform: "translate(100%)"
     },
     answerControlContainer: {
       textAlign: "center"
@@ -82,6 +91,15 @@ const styles = theme => {
   };
 }
 
+
+
+const kanjiTransitionStyles = {
+  entering: { transform: "translate(0)" },
+  entered: { transform: "translate(0)" },
+  extiting: { transform: "translate(-100%)" },
+  exited: { transform: "translate(-100%)" }
+}
+
 class GlossaryPractice extends React.Component {
   constructor(props) {
     super(props);
@@ -93,12 +111,16 @@ class GlossaryPractice extends React.Component {
         description: "",
         words: []
       },
-      activeWord: null
+      currentWord: null,
+      currentWordIndex: 0,
+      currentAnswer: ""
     };
 
     this.getGlossary = this.getGlossary.bind(this);
     this.getNextWord = this.getNextWord.bind(this);
-    this.onSubmitAnswer = this.onSubmitAnswer.bind(this);
+    this.handleSubmitAnswer = this.handleSubmitAnswer.bind(this);
+    this.handleAnswerChange = this.handleAnswerChange.bind(this);
+    this.handleSkip = this.handleSkip.bind(this);
 
   }
 
@@ -108,10 +130,45 @@ class GlossaryPractice extends React.Component {
     });
   }
 
+  handleSubmitAnswer(event) {
+    if (this.state.currentAnswer === this.state.currentWord.translation) {
+      console.log("You guessed it! Next!");
+    } else {
+      console.log("Wrong! Next!");
+    }
+    const currentAnswer = "";
+    this.setState({ currentAnswer });
+
+    console.log(this.state.currentAnswer);
+  }
+
+  handleAnswerChange(event) {
+    const currentAnswer = event.target.value;
+    this.setState({ currentAnswer });
+  }
+
+  handleSkip() {
+    this.getNextWord();
+  }
+
   getNextWord() {
-    this.setState({
-      activeWord: this.state.glossary.words[0]
-    });
+
+    console.log("Current state: ", this.state);
+
+    if (this.state.currentWord === null) {
+      this.setState({
+        currentWord: this.state.glossary.words[0]
+      });
+    } else {
+      let currentWordIndex = this.state.currentWordIndex + 1;
+
+      if (currentWordIndex >= this.state.glossary.words.length) return;
+
+      const currentWord = this.state.glossary.words[currentWordIndex];
+
+      this.setState({ currentWord, currentWordIndex });
+    }
+
   }
 
   getGlossary() {
@@ -154,9 +211,7 @@ class GlossaryPractice extends React.Component {
     return Promise.all([glossaryPromise, wordsPromise]);
   }
 
-  onSubmitAnswer(event) {
-    const word = event.target.value
-  }
+
 
   render() {
     const state = this.state;
@@ -167,18 +222,21 @@ class GlossaryPractice extends React.Component {
         <div className={classes.root}>
           <Grid justify="center" direction="column" className={classes.questionContainer} container>
             <Grid item>
-              <Paper className={classes.kanjiContainer}>
+              <Paper className={classes.questionContainer}>
                 <Grid justify="center" direction="column" container>
-                  <Grid className={classes.kanji} item>
+                  <Grid className={classes.kanjiContainer} item>
                     <Typography variant="h5">What is the translation of</Typography>
-                    <Typography variant="h1" >{state.activeWord !== null ? state.activeWord.kanji : ""}</Typography>
-                    {/* <Typography variant="h2" >{state.activeWord !== null ? state.activeWord.kanji : ""}</Typography> */}
+                    <Transition key={state.currentWordIndex} in={state.currentWord !== null} timeout={300}>
+                      {transitionState => (
+                        <Typography  variant="h1" style={{ ...kanjiTransitionStyles[transitionState] }} className={classes.kanji} >{state.currentWord !== null ? state.currentWord.kanji : ""}</Typography>
+                      )}
+                    </Transition>
                   </Grid>
                 </Grid>
               </Paper>
             </Grid>
             <Grid item>
-              <form className={classes.answerControlContainer}>
+              <form className={classes.answerControlContainer} onSubmit={this.handleSubmitAnswer}>
                 <TextField
                   variant="outlined"
                   className={classes.answerTextField}
@@ -188,12 +246,15 @@ class GlossaryPractice extends React.Component {
                   inputProps={{
                     className: classes.answerTextField
                   }}
+                  value={state.currentAnswer}
+                  onChange={this.handleAnswerChange}
                 />
-                <Button variant="contained" color="primary" className={classes.answerButton} fullWidth>
+                <Button type="submit" variant="contained" color="primary" className={classes.answerButton} fullWidth >
                   SUBMIT
-                {/* <SubdirectoryArrowRightIcon className={classes.answerButtonIcon} /> */}
                 </Button>
-                <Button variant="contained" color="secondary" fullWidth>
+
+                {/* <SubdirectoryArrowRightIcon className={classes.answerButtonIcon} /> */}
+                <Button variant="contained" color="secondary" fullWidth onClick={this.handleSkip}>
                   SKIP
                 {/* <ArrowForwardIcon className={classes.answerButtonIcon} /> */}
                 </Button>

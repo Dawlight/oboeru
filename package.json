@@ -42,6 +42,7 @@
     "react-dom": "^16.8.6",
     "react-router": "^5.0.0",
     "react-router-dom": "^5.0.0",
+    "tar": "^4.4.8",
     "typeface-roboto": "0.0.54"
   }
 }
